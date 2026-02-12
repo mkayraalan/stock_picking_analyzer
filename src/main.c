@@ -2,17 +2,45 @@
 #include <stdlib.h>
 #include "csv.h"
 #include "strategies.h"
+#include <string.h>
 
-int main(void) {
+typedef enum { STRAT_BOTH, STRAT_SINGLE, STRAT_MULTI } StrategyMode;
+
+int main(int argc, char* argv[]) {
     PricePoint* prices = NULL;
     int n = 0;
-
-    if (read_prices_csv("data/sample.csv", &prices, &n) != 0 || n <= 0) {
-        printf("Failed to read CSV\n");
+    
+    
+    const char* path = "data/sample.csv"; // default
+        if (argc >= 2) {
+            path = argv[1];
+        }
+    
+    if (read_prices_csv(path, &prices, &n) != 0 || n <= 0) {
+        printf("Failed to read CSV: %s\n", path);
         return 1;
     }
+    
+int fee = 0;
 
-    SingleResult r = strategy_single(prices, n);
+StrategyMode mode = STRAT_BOTH;
+
+for (int i = 2; i < argc; i++) {
+    if (strcmp(argv[i], "--strategy=single") == 0) mode = STRAT_SINGLE;
+    else if (strcmp(argv[i], "--strategy=multi") == 0) mode = STRAT_MULTI;
+    else if (strncmp(argv[i], "--fee=", 6) == 0) fee = atoi(argv[i] + 6);
+    else {
+        printf("Unknown option: %s\n", argv[i]);
+        printf("Usage: %s [csv_path] [--strategy=single|multi] [--fee=N]\n", argv[0]);
+        return 1;
+    }
+}
+
+if (fee < 0) fee = 0;
+
+if (mode == STRAT_BOTH || mode == STRAT_SINGLE) {
+    
+    SingleResult r = strategy_single(prices, n, fee);
 
     printf("Strategy: single\n");
     printf("Profit: %d\n", r.profit);
@@ -31,8 +59,11 @@ int main(void) {
 } else {
     printf("No profitable trade found.\n");
 }
-    
-   MultiResult m = strategy_multi(prices, n);
+}
+   
+if (mode == STRAT_BOTH || mode == STRAT_MULTI) {
+
+   MultiResult m = strategy_multi(prices, n,fee);
 
 printf("\nStrategy: multi\n");
 printf("Total Profit: %d\n", m.total_profit);
@@ -46,9 +77,6 @@ for (int i = 0; i < m.count; i++) {
            prices[s].date, prices[s].price);
 }
 
-free(m.buy_idx);
-free(m.sell_idx); // memory leak'i önlemek için 
-
 int invested = 0;
 for (int i = 0; i < m.count; i++) {
     invested += prices[m.buy_idx[i]].price;
@@ -58,4 +86,8 @@ if (invested > 0) {
     double profit_pct = (double)m.total_profit / (double)invested * 100.0;
     printf("Total Profit %% (on total buys): %.2f%%\n", profit_pct);
 }
+    free(m.buy_idx);
+    free(m.sell_idx); // memory leak'i önlemek için 
 }
+}
+

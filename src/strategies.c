@@ -2,7 +2,7 @@
 #include "strategies.h"
 #include <stdlib.h>
 
-SingleResult strategy_single(const PricePoint* p, int n) {
+SingleResult strategy_single(const PricePoint* p, int n, int fee) {
     SingleResult r;
     r.buy_idx = -1;
     r.sell_idx = -1;
@@ -16,7 +16,7 @@ SingleResult strategy_single(const PricePoint* p, int n) {
             min_price = p[i].price;
             min_idx = i;
         } else {
-            int prof = p[i].price - min_price;
+            int prof = p[i].price - min_price - fee;
             if (prof > r.profit) {
                 r.profit = prof;
                 r.buy_idx = min_idx;
@@ -27,7 +27,7 @@ SingleResult strategy_single(const PricePoint* p, int n) {
     return r;
 }
 
-MultiResult strategy_multi(const PricePoint* p, int n) {
+MultiResult strategy_multi(const PricePoint* p, int n, int fee) {
     MultiResult r;
     r.total_profit = 0;
     r.count = 0;
@@ -50,10 +50,13 @@ MultiResult strategy_multi(const PricePoint* p, int n) {
 
         int sell = i - 1;
 
-        r.buy_idx[r.count] = buy;
-        r.sell_idx[r.count] = sell;
-        r.total_profit += p[sell].price - p[buy].price;
-        r.count++;
+        int net = p[sell].price - p[buy].price - fee;
+        if (net > 0){ // eğer trade karlı değilse fee yüzünden atla
+            r.buy_idx[r.count] = buy;
+            r.sell_idx[r.count] = sell;
+            r.total_profit += net;
+            r.count++;
+        }
     }
 
     return r;

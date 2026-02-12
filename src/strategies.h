@@ -16,7 +16,7 @@ typedef struct {
     int total_profit;
 } MultiResult;
 
-SingleResult strategy_single(const PricePoint* p, int n);
-MultiResult strategy_multi(const PricePoint* p, int n);
+SingleResult strategy_single(const PricePoint* p, int n, int fee);
+MultiResult strategy_multi(const PricePoint* p, int n, int fee);
 
 #endif
